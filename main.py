@@ -75,7 +75,7 @@ def echo_message(message):
             if stripped_word not in names_old:
                 names_old.append(stripped_word)
                 last_leter1 = str(names_old[-1])[-1]
-                if last_leter1 == 'ь' or last_leter1 == 'ъ':
+                if last_leter1 == 'ь' or last_leter1 == 'ъ' or last_leter1 == 'Ы':
                     last_leter1 = str(names_old[-1])[-2]
                 for name in names:
                     if name not in names_old:
