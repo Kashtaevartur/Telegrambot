@@ -16,8 +16,6 @@ for city in data['city']:
     name = city['name']
     names1.append(name)
 
-names = names1.copy()
-random.shuffle(names)
 
 #TOKEN = '6247166648:AAFszyev0r03NLcvcrgZOpwsT-KwwQMAyzQ'
 TOKEN = os.getenv("TOKEN")
@@ -52,6 +50,9 @@ def reset():
 
 @bot.message_handler(func=lambda message: True)
 def echo_message(message):
+    names = names1.copy()
+    random.shuffle(names)
+
     word = str(message.text)
 
     if word[0].islower():
@@ -59,7 +60,7 @@ def echo_message(message):
     stripped_word = word.rstrip(',. ')
     is_non_russian_letter = True
     for char in stripped_word:
-        if ord('а') <= ord(char) <= ord('я') or ord('А') <= ord(char) <= ord('Я'):
+        if ord('а') <= ord(char) <= ord('я') or ord('А') <= ord(char) <= ord('Я') or char == ' ' or char == '-':
             continue
         else:
             bot.reply_to(message, "Введите город на русском языке", reply_markup=keyboard)
