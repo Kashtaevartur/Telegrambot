@@ -30,9 +30,13 @@ keyboard = ReplyKeyboardMarkup(resize_keyboard=True).add(button)
 # Отправляем сообщение с клавиатурой
 # message_text = 'Игра началась'
 # bot.send_message(chat_id=bot.get_updates()[-1].message.chat.id, text=message_text, reply_markup=keyboard)
+def reset():
+    global names_old
+    names_old = [1111, 1111]
 
 @bot.message_handler(commands=['help', 'start'])
 def send_welcome(message):
+    reset()
     bot.reply_to(message, """\
 Привет!
 Я бот который поиграет с тобой в города
@@ -44,9 +48,7 @@ def send_welcome(message):
 
 names_old = [1111, 1111]
 
-def reset():
-    global names_old
-    names_old = [1111, 1111]
+
 
 @bot.message_handler(func=lambda message: True)
 def echo_message(message):
@@ -75,7 +77,7 @@ def echo_message(message):
             if stripped_word not in names_old:
                 names_old.append(stripped_word)
                 last_leter1 = str(names_old[-1])[-1]
-                if last_leter1 == 'ь' or last_leter1 == 'ъ' or last_leter1 == 'Ы':
+                if last_leter1 == 'ь' or last_leter1 == 'ъ' or last_leter1 == 'ы':
                     last_leter1 = str(names_old[-1])[-2]
                 for name in names:
                     if name not in names_old:
