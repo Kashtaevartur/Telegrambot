@@ -23,7 +23,7 @@ TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 # Создаем клавиатуру с одной кнопкой
-button_text = 'Попробуй заново'
+button_text = 'попробуй заново'
 button = KeyboardButton(button_text)
 keyboard = ReplyKeyboardMarkup(resize_keyboard=True).add(button)
 
@@ -69,7 +69,7 @@ def echo_message(message):
             return
 
     if len(names_old) <= 2:
-        if word == 'лошара':
+        if word == 'попробуй заново':
             reset()
             bot.reply_to(message, "Ok, давай сначала)\nПиши город:", reply_markup=keyboard)
             return
@@ -94,7 +94,7 @@ def echo_message(message):
             bot.reply_to(message, "Такого города нет", reply_markup=keyboard)
             return
     else:
-        if word == 'Попробуй заново':
+        if word == 'попробуй заново':
             reset()
             bot.reply_to(message, "Ok, давай сначала)\nПиши город:", reply_markup=keyboard)
             return
