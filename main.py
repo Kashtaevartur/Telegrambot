@@ -69,7 +69,7 @@ def echo_message(message):
             return
 
     if len(names_old) <= 2:
-        if word == 'Попробуй заново':
+        if word == 'лошара':
             reset()
             bot.reply_to(message, "Ok, давай сначала)\nПиши город:", reply_markup=keyboard)
             return
