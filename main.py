@@ -1,158 +1,173 @@
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton
+from datetime import datetime
 import os
 import json
+import csv
 import random
 
-with open('cities.json', 'r') as f:
+# Глобальные переменные
+names_old = []
+first_turn = True  # Инициализация переменной
+
+# Функция для логирования информации о пользователе и его запросах
+def log_user_interaction(user_id, user_name, username, message_text):
+    file_exists = os.path.isfile('user_logs.csv')
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Текущая дата и время
+
+    with open('user_logs.csv', mode='a', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        if not file_exists:
+            writer.writerow(['User ID', 'Name', 'Username', 'Message', 'Date and Time'])
+        writer.writerow([user_id, user_name, username, message_text, current_time])
+
+# Чтение списка городов
+with open('cities_ua.json', 'r') as f:
     data = json.load(f)
 
+names1 = [city['name'] for city in data['city']]
 
-names1 = []
-for city in data['city']:
-    city_id = city['city_id']
-    country_id = city['country_id']
-    region_id = city['region_id']
-    name = city['name']
-    names1.append(name)
+def read_file(file_name):
+    with open(file_name, 'r') as file:
+        return file.read()
 
-
-#TOKEN = '6247166648:AAFszyev0r03NLcvcrgZOpwsT-KwwQMAyzQ'
-TOKEN = os.getenv("TOKEN")
-
+# Чтение токена бота
+TOKEN = read_file('token.txt')
 bot = telebot.TeleBot(TOKEN)
 
 # Создаем клавиатуру с одной кнопкой
-button_text = 'попробуй заново'
-button = KeyboardButton(button_text)
-keyboard = ReplyKeyboardMarkup(resize_keyboard=True).add(button)
+button = KeyboardButton('🔄 Спробуй заново')
+button1 = KeyboardButton('💡 Підказка')
+keyboard = ReplyKeyboardMarkup(resize_keyboard=True).add(button, button1)
 
-# Отправляем сообщение с клавиатурой
-# message_text = 'Игра началась'
-# bot.send_message(chat_id=bot.get_updates()[-1].message.chat.id, text=message_text, reply_markup=keyboard)
+# Функция для сброса использованных городов
 def reset():
-    global names_old
-    names_old = [1111, 1111]
+    global names_old, first_turn
+    names_old = []
+    first_turn = True
 
+# Обработчик команды /start и /help
 @bot.message_handler(commands=['help', 'start'])
 def send_welcome(message):
     reset()
-    bot.reply_to(message, """\
-Привет!
-Я бот который поиграет с тобой в города
-но я знаю только русский язык(
-С тебя первый город:'
-Поехали... \
-""")
+    user = message.from_user
+    username = user.username if user.username else 'Не вказан'
+    log_user_interaction(user.id, user.first_name, username, '/start')  # Логирование при старте
+    bot.reply_to(message, "Вітаю!\nЯ бот, який пограє з тобою у міста.\nЗ тебе перше місто: Поїхали...")
 
-
-names_old = [1111, 1111]
-
-
-
+# Основной обработчик сообщений
 @bot.message_handler(func=lambda message: True)
 def echo_message(message):
+    global first_turn, names_old
+
     names = names1.copy()
     random.shuffle(names)
 
     word = str(message.text)
+    user_name = message.from_user.first_name
+    user_id = message.from_user.id
+    username = message.from_user.username if message.from_user.username else 'Не вказан'
+
+    # Логирование каждого сообщения пользователя
+    log_user_interaction(user_id, user_name, username, word)
+
+
 
     if word[0].islower():
         word = word.capitalize()
     stripped_word = word.rstrip(',. ')
-    is_non_russian_letter = True
-    for char in stripped_word:
-        if ord('а') <= ord(char) <= ord('я') or ord('А') <= ord(char) <= ord('Я') or char == ' ' or char == '-' or char == 'ё':
-            continue
-        else:
-            bot.reply_to(message, "Введите город на русском языке", reply_markup=keyboard)
+
+    # Проверка на использование украинских букв и игнорирование эмодзи
+    allowed_characters = ' абвгґдеєжзиіїйклмнопрстуфхцчшщьюяАБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ\'-'
+
+    # Добавляем эмодзи, которые нужно игнорировать
+    allowed_characters += '💡🔄'
+
+    if not all(char in allowed_characters for char in stripped_word):
+        bot.reply_to(message, "Ти взагалі на якій мові розмовляєш? Пиши українською!", reply_markup=keyboard)
+        return
+
+    # Логика игры в города
+    if first_turn:
+        if word == '🔄 Спробуй заново':
+            reset()
+            bot.reply_to(message, "Ok, давай спочатку)\nПиши місто:", reply_markup=keyboard)
             return
 
-    if len(names_old) <= 2:
-        if word == 'попробуй заново':
-            reset()
-            bot.reply_to(message, "Ok, давай сначала)\nПиши город:", reply_markup=keyboard)
+        if word == '💡 Підказка':
+            bot.reply_to(message, "Напиши яке-небудь місто українською", reply_markup=keyboard)
             return
         if stripped_word in names:
-            if stripped_word not in names_old:
-                names_old.append(stripped_word)
-                last_leter1 = str(names_old[-1])[-1]
-                if last_leter1 == 'ь' or last_leter1 == 'ъ' or last_leter1 == 'ы':
-                    last_leter1 = str(names_old[-1])[-2]
-                for name in names:
-                    if name not in names_old:
-                        if name.startswith(last_leter1.upper()):
-                            bot.reply_to(message, {name}, reply_markup=keyboard)
-                            names_old.append(name)
-                            return
+            names_old.append(stripped_word)
+            if stripped_word[-1] in 'ьґjarиudkbgl)s':
+                last_letter = stripped_word[-2]
+            else:
+                last_letter = stripped_word[-1]
+            i = 0
 
+            while i < len(names):  # Проходим по списку городов
+                if names[i][0] == last_letter.upper():  # Проверяем первую букву города
+                    bot.reply_to(message, names[i], reply_markup=keyboard)
+                    names_old.append(names[i])
+                    first_turn = False
+                    break  # Если совпадение найдено, завершаем цикл
+                i += 1  # Переходим к следующему городу
 
-                else:
-                    bot.reply_to(message, f"Не жульничай, город {stripped_word} уже был, давай другой город на букву '{str(names_old[-1])[-1].upper()}'", reply_markup=keyboard)
-                    return
+            # for name in names:
+            #     bot.reply_to(message, name, reply_markup=keyboard)
+            #     names_old.append(name)
+            #     first_turn = False
+            #     return
         else:
-            bot.reply_to(message, "Такого города нет", reply_markup=keyboard)
+            bot.reply_to(message, f"Дітька лисого а не {stripped_word} давай щось реальне", reply_markup=keyboard)
             return
     else:
-        if word == 'попробуй заново':
+
+        last_letter = names_old[-1][-1]
+        if last_letter in 'ьґjarиudkbgl)s':
+            last_letter = names_old[-1][-2]
+
+        if word == '🔄 Спробуй заново':
             reset()
-            bot.reply_to(message, "Ok, давай сначала)\nПиши город:", reply_markup=keyboard)
+            bot.reply_to(message, "Ok, давай спочатку)\nПиши місто:", reply_markup=keyboard)
             return
 
-        if str(names_old[-1])[-1] == 'ь' or str(names_old[-1])[-1] == 'ъ' or str(names_old[-1])[-1] == 'ы':
-            if stripped_word.startswith(str(names_old[-1])[-2].upper()):
-                # добавляем в массив использованных слов
-                if stripped_word in names:
-                    if stripped_word not in names_old:
-                        names_old.append(stripped_word)
-                        last_leter = str(names_old[-1])[-1]
-                        if last_leter == 'ь' or last_leter == 'ъ' or last_leter == 'ы':
-                            last_leter = str(names_old[-1])[-2]
-                        for name in names:
-                            if name not in names_old:
-                                if name.startswith(last_leter.upper()):
-                                    bot.reply_to(message, {name}, reply_markup=keyboard)
-                                    names_old.append(name)
-                                    return
-
-
-                    else:
-                        bot.reply_to(message,
-                                     f"Не жульничай, город {stripped_word} уже был, давай другой город на букву '{str(names_old[-1])[-1].upper()}'", reply_markup=keyboard)
+        if word == '💡 Підказка':
+            if last_letter in 'ьґjaruиdkbgl)s':
+                last_letter = stripped_word[-2]
+                for name in names:
+                    if name not in names_old and name.startswith(last_letter.upper()):
+                        bot.reply_to(message, name, reply_markup=keyboard)
                         return
-                else:
-                    bot.reply_to(message, "Такого города нет", reply_markup=keyboard)
-                    return
             else:
-                bot.reply_to(message, f"Тебе нужно написать город на букву '{str(names_old[-1])[-2].upper()}'", reply_markup=keyboard)
+                for name in names:
+                    if name not in names_old and name.startswith(last_letter.upper()):
+                        bot.reply_to(message, name, reply_markup=keyboard)
+                        return
 
+        if stripped_word in names_old:
+            bot.reply_to(message, f"Ти хочеш намахати мене, місто {stripped_word} вже було, напиши інше на букву '{last_letter.upper()}'", reply_markup=keyboard)
+            return
+
+        if stripped_word.startswith(last_letter.upper()):
+            if stripped_word in names and stripped_word not in names_old:
+                names_old.append(stripped_word)
+                last_letter = stripped_word[-1]
+                if last_letter in 'ьґjarиudkbgl)s':
+                    last_letter = stripped_word[-2]
+                for name in names:
+                    if name not in names_old and name.startswith(last_letter.upper()):
+                        bot.reply_to(message, name, reply_markup=keyboard)
+                        names_old.append(name)
+                        return
+            else:
+                if stripped_word in names_old:
+                    bot.reply_to(message, f"Ти хочеш намахати мене, місто {stripped_word} вже було, напиши інше на букву '{last_letter.upper()}'", reply_markup=keyboard)
+                    return
+                if stripped_word not in names:
+                    bot.reply_to(message, f"Дітька лисого а не {stripped_word} давай щось реальне", reply_markup=keyboard)
+                    return
         else:
-            if stripped_word.startswith(str(names_old[-1])[-1].upper()):
-                # добавляем в массив использованных слов
-                if stripped_word in names:
-                    if stripped_word not in names_old:
-                        names_old.append(stripped_word)
-                        last_leter = str(names_old[-1])[-1]
-                        if last_leter == 'ь' or last_leter == 'ъ' or last_leter == 'ы':
-                            last_leter = str(names_old[-1])[-2]
-                        for name in names:
-                            if name not in names_old:
-                                if name.startswith(last_leter.upper()):
-                                    bot.reply_to(message, {name}, reply_markup=keyboard)
-                                    names_old.append(name)
-                                    return
-
-
-                    else:
-                        bot.reply_to(message,
-                                     f"Не жульничай, город {stripped_word} уже был, давай другой город на букву '{str(names_old[-1])[-1].upper()}'",
-                                     reply_markup=keyboard)
-                        return
-                else:
-                    bot.reply_to(message, "Такого города нет", reply_markup=keyboard)
-                    return
-            else:
-                bot.reply_to(message, f"Тебе нужно написать слово на букву '{str(names_old[-1])[-1].upper()}'",
-                             reply_markup=keyboard)
+            bot.reply_to(message, f"Що ти там тицяєш? Пиши місто на букву '{last_letter.upper()}'", reply_markup=keyboard)
 
 bot.infinity_polling()
