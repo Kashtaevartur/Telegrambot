@@ -19,8 +19,4 @@ def test_example1():
     result = a + b
     assert result == 14
 
-    def test_example1():
-    a = 7
-    b = 5
-    result = a + b
-    assert result == 12
+  
