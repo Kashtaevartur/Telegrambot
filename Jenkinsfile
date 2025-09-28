@@ -2,33 +2,28 @@ pipeline {
     agent any
 
     environment {
-        PYTHON_BIN = "" // Будет определяться после создания venv
+        PYTHON_BIN = "" // будет определяться после создания venv
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Клонируем репозиторий в рабочую директорию Jenkins
                 checkout scm
             }
         }
 
         stage('Setup Python Environment') {
             steps {
-                // Создаём виртуальное окружение внутри workspace
                 sh 'python3 -m venv venv'
-                // Определяем путь к Python виртуального окружения
                 script {
                     env.PYTHON_BIN = "${env.WORKSPACE}/venv/bin/python"
                 }
-                // Обновляем pip
                 sh "${env.PYTHON_BIN} -m pip install --upgrade pip"
             }
         }
 
         stage('Install dependencies') {
             steps {
-                // Устанавливаем зависимости из requirements.txt, если файл есть
                 sh """
                     if [ -f requirements.txt ]; then
                         ${env.PYTHON_BIN} -m pip install -r requirements.txt
@@ -37,20 +32,31 @@ pipeline {
             }
         }
 
-        stage('Run Telegram Bot') {
+        stage('Run Tests') {
             steps {
-                // Запускаем бота в виртуальном окружении
-                sh "${env.PYTHON_BIN} main.py"
+                sh "${env.PYTHON_BIN} -m pytest"
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t telegram-bot:latest .'
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                sh 'docker run -d --name mybot telegram-bot:latest'
             }
         }
     }
 
     post {
+        success {
+            echo "Бот успешно собран и запущен!"
+        }
         failure {
             echo "Произошла ошибка! Проверь лог."
-        }
-        success {
-            echo "Бот успешно запущен!"
         }
     }
 }
